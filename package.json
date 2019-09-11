@@ -2,6 +2,7 @@
   "name": "game-of-life",
   "version": "0.1.0",
   "private": true,
+  "homepage": "https://yifanxu.github.io/GOL_React_Deploy/",
   "dependencies": {
     "bootstrap": "^4.3.1",
     "react": "^16.9.0",
