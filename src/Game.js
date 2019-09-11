@@ -1,7 +1,6 @@
 import React from 'react'
+import { ButtonGroup, Button} from 'reactstrap'
 import './Game.css'
-
-const updateInterval = 100;
 
 const unSelectedStyle = {
     'color': 'black',
@@ -19,9 +18,10 @@ class GameOfLife extends React.Component {
 
         this.state = {
             paused: true,
-            hardEdge: false,
             cycle: 0,
+            populateChance: 0.3,
             updateInterval: 100,
+            showNeighbors: false,
             grid: this.initGrid(this.props.size)
         }
     }
@@ -31,6 +31,8 @@ class GameOfLife extends React.Component {
             if(this.state.paused) return;
             this.updateGrid();
         }, this.state.updateInterval);
+
+        this.reset = this.initGrid.bind(this)
     }
     componentWillUnmount() {
         clearInterval(this.interval);
@@ -96,11 +98,11 @@ class GameOfLife extends React.Component {
     }
 
     updateNeighbor (grid, row, col, change) {
-       if (this.state.hardEdge && (row < 0 || row >= this.props.size || col < 0 || col >= this.props.size)) {
+       if (this.props.hardEdge && (row < 0 || row >= this.props.size || col < 0 || col >= this.props.size)) {
            return;
        }
 
-       if(!this.state.hardEdge) {
+       if(!this.props.hardEdge) {
            if(row < 0) row = this.props.size - 1;
            if(row >= this.props.size) row = 0;
            if(col < 0) col = this.props.size - 1;
@@ -110,18 +112,27 @@ class GameOfLife extends React.Component {
     }
 
     randomPopulate(chance) {
-        let listLength = this.props.size * this.props.size * chance;
         let hitList = [];
-        for(let i = 0; i < listLength; i++) {
-            hitList.push({
-                row: Math.floor(Math.random() * this.props.size),
-                col: Math.floor(Math.random() * this.props.size)
-            })
+        for(let i = 0; i < this.props.size; i++) {
+            for(let j = 0; j < this.props.size; j++) {
+                if(Math.random() <= chance) {
+                    hitList.push({
+                        row: i,
+                        col: j
+                    })
+                }
+            }
         }
+        console.log(`repopulating ${hitList.length} cells`)
         this.handleChange(hitList)
     }
 
     render() {
+        //If the grid actually has a different size than expected, rerender
+        if(this.state.grid.length !== this.props.size) {
+            this.forceUpdate();
+        }
+
         let rows = [];
         // Construct Elements
         for(let i = 0; i < this.props.size; i++) {
@@ -135,7 +146,7 @@ class GameOfLife extends React.Component {
                             className="gridButton"
                             onClick={()=>this.handleChange([{row: i, col: j}])}
                         >
-                            {this.state.grid[i][j].neighbor}
+                            {/* {this.state.showNeighbors ? this.state.grid[i][j].neighbor : null} */}
                         </button>
                     </th>
                 )
@@ -144,26 +155,41 @@ class GameOfLife extends React.Component {
         }
         return (
             <div>
-                <h1>Conway's Game of Life (React Edition)</h1>
                 <table>
                     <tbody>{rows}</tbody>
                 </table>
                 <br/>
-                <div>
-                    <button onClick={()=> this.setState({paused: !this.state.paused})}>{this.state.paused ? 'Paused' : 'Running'}</button>
-                    <button onClick={this.updateGrid.bind(this)}>Next</button>
+                <div className="controllGroup">
+                    <ButtonGroup>
+                        <Button onClick={()=> this.setState({paused: !this.state.paused})}>{this.state.paused ? 'Paused' : 'Running'}</Button>
+                        <Button onClick={this.updateGrid.bind(this)}>Next</Button>
+                        <Button onClick={()=>this.randomPopulate(this.state.populateChance)}>Flip {this.state.populateChance * 100}% cells</Button>
+                        <Button onClick={()=>this.setState({grid: this.initGrid(this.props.size)})}>Clear</Button>
+                    </ButtonGroup>
                 </div>
-                <input value={this.state.updateInterval} onChange={e=>{
-                    this.setState({updateInterval: e.target.value})
-                    if(this.interval) {
-                        clearInterval(this.interval);
-                    }
-                    this.interval = setInterval(() =>{
-                        if(this.state.paused) return;
-                        this.updateGrid();
-                    }, this.state.updateInterval);
-                }}/>
-                <button onClick={()=>this.randomPopulate(0.3)}>Spice it up</button>
+                <div className="controllGroup">
+                    Flip chance
+                    <input value={this.state.populateChance} onChange={e=>this.setState({populateChance: e.target.value})}/>
+                </div>
+                <div className="controllGroup">
+                    Show Neighbor Count
+                    <input type="checkbox" value={this.state.showNeighbors} onChange={e=>this.setState({showNeighbors: e.target.value})}/>
+                </div>
+                <div className="controllGroup">
+                    Update Interval: 
+                    <input value={this.state.updateInterval} onChange={e=>{
+                        const newInterval = e.target.value
+                        this.setState({updateInterval: newInterval})
+                        if(this.interval) {
+                            clearInterval(this.interval);
+                        }
+                        this.interval = setInterval(() =>{
+                            if(this.state.paused) return;
+                            this.updateGrid();
+                        }, newInterval);
+                    }}/>
+                </div>
+                
                 <p>Cycle {this.state.cycle}</p>
             </div>
         )
